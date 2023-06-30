@@ -12,5 +12,7 @@ let accelerateKeywords = [
 
 let specializeKeywords = ["specialize"]
 
-let mexprExtendedKeywords = concat specializeKeywords (
-                              concat holeKeywords accelerateKeywords)
+let externalsKeywords = ["externalbind"]
+
+let mexprExtendedKeywords = concat externalsKeywords (concat specializeKeywords (
+                              concat holeKeywords accelerateKeywords))
