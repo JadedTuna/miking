@@ -4,7 +4,7 @@ include "mexpr/ast.mc"
 lang ExternalsAst =
   KeywordMaker + PrettyPrint + SeqAst + ConstAst + CharAst
   syn Expr =
-  | TmExtBind {e: Expr, ty: Type, info: Info}
+  | TmExtBind {e: Expr, ty: Type, deps: [String], info: Info}
 
   -- state that this is a keyword
   sem isKeyword =
@@ -22,12 +22,17 @@ lang ExternalsAst =
       foldr (lam a. lam b. tyarrow_ a b) (get rettype 0) argtypes
     else never
 
+  sem getDeps =
+  | TmSeq t ->
+    map tmSeq2String t.tms
+
   -- handle externalbind symbol as a keyword
   sem matchKeywordString (info: Info) =
   | "externalbind" ->
-    Some (2, lam lst. TmExtBind {
+    Some (3, lam lst. TmExtBind {
       e = get lst 0,
       ty = temporary (get lst 1),
+      deps = getDeps (get lst 2),
       info = info
     })
 
@@ -70,4 +75,9 @@ lang ExternalsAst =
     match optionMapM extract_char t.tms with Some str then
       str
     else never
+
+  sem collectDeps env =
+  | TmExtBind t ->
+    collectDeps {env with deps = (setUnion (setOfSeq cmpString t.deps) env.deps)} t.e
+  | t -> sfold_Expr_Expr (collectDeps) env t
 end

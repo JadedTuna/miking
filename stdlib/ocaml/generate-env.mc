@@ -6,13 +6,15 @@ include "mexpr/cmp.mc"
 type GenerateEnv = {
   constrs : Map Name Type,
   records : Map (Map SID Type) Name,
-  exts : Map Name [ExternalImpl]
+  exts : Map Name [ExternalImpl],
+  deps : Set String
 }
 
 let emptyGenerateEnv = use MExprCmp in {
   constrs = mapEmpty nameCmp,
   records = mapEmpty (mapCmp cmpType),
-  exts = mapEmpty nameCmp
+  exts = mapEmpty nameCmp,
+  deps = setEmpty cmpString
 }
 
 let objRepr = use OCamlAst in

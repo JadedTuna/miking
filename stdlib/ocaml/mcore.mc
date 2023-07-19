@@ -7,6 +7,8 @@ include "ocaml/generate.mc"
 include "ocaml/pprint.mc"
 include "sys.mc"
 
+include "externals/ast.mc"
+
 type Hooks a =
   { debugTypeAnnot : Expr -> ()
   , debugGenerate : String -> ()
@@ -26,7 +28,7 @@ let mkEmptyHooks : all a. ([String] -> [String] -> String -> a) -> Hooks a =
 
 lang MCoreCompileLang =
   MExprTypeAnnot + MExprRemoveTypeAscription + MExprTypeLift +
-  OCamlTypeDeclGenerate + OCamlGenerate + OCamlGenerateExternalNaive
+  OCamlTypeDeclGenerate + OCamlGenerate + OCamlGenerateExternalNaive + ExternalsAst
 
   sem collectLibraries : Map Name [ExternalImpl] -> Set String -> ([String], [String])
   sem collectLibraries extNameMap =
@@ -66,6 +68,11 @@ lang MCoreCompileLang =
         (map (lam x : (String, String). x.0) (externalListOcamlPackages ()))
     in
 
+    printLn "-- DEPS --";
+    let newenv = (collectDeps env ast) in
+      setFold (lam . lam x. printLn x) () newenv.deps;
+    printLn "-- END DEPS --";
+
     -- Collect external library dependencies
     match collectLibraries env.exts syslibs with (libs, clibs) in
     let ocamlProg =
@@ -80,7 +87,7 @@ lang MCoreCompileLang =
     hooks.exitBefore ();
 
     -- Compile OCaml AST
-    hooks.compileOcaml libs clibs ocamlProg
+    hooks.compileOcaml (concat libs (setFold (lam l. lam x. (concat [x] l)) [] newenv.deps)) clibs ocamlProg
 
   -- Compiles and runs the given MCore AST, using the given standard in and
   -- program arguments. The return value is a record containing the return code,
