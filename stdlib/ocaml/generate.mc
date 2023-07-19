@@ -17,6 +17,8 @@ include "ocaml/generate-env.mc"
 include "ocaml/external.mc"
 include "common.mc"
 
+include "externals/ast.mc"
+
 let _omatch_ = lam target. lam arms.
   use OCamlAst in
   match arms with [h] ++ rest
@@ -66,7 +68,7 @@ let lookupRecordFields = use MExprAst in
 type MatchRecord = {target : Expr, pat : Pat, thn : Expr,
                     els : Expr, ty : Type, info : Info}
 
-lang OCamlTopGenerate = MExprAst + OCamlAst + OCamlGenerateExternalNaive
+lang OCamlTopGenerate = MExprAst + OCamlAst + OCamlGenerateExternalNaive + ExternalsAst
   sem generateTops (env : GenerateEnv) =
   | t ->
     match generateTopsAndExpr env t with (tops, expr) then
@@ -568,6 +570,11 @@ lang OCamlGenerate = MExprAst + OCamlAst + OCamlTopGenerate + OCamlMatchGenerate
       ty = TyUnknown {info = info},
       info = info
     }
+  --| TmExtBind t -> printLn "-- NOTICE --"; printLn (expr2str t.e); (generate env t.e)
+  --| TmExtBind t -> OTmExprExt { expr = (join t.e) }
+  | TmExtBind t -> OTmExprExt { expr = (tmSeq2String t.e) }
+  --| TmExtBind t -> OTmExprExt { expr = (expr2str t.e) }
+
   | t -> smap_Expr_Expr (generate env) t
 end
 

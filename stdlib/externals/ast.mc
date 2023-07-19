@@ -1,3 +1,6 @@
+include "mexpr/keyword-maker.mc"
+include "mexpr/ast.mc"
+
 lang ExternalsAst =
   --KeywordMaker + MExprAst + MExprParser +
   --MExprPrettyPrint +
@@ -5,22 +8,44 @@ lang ExternalsAst =
   --+ MExprEq + Eval +
   --PrettyPrint +
   --MExprTypeCheck + LamEval + OCamlTypePrettyPrint
-  KeywordMaker + PrettyPrint + MExpr + MExprEq
+  --KeywordMaker + PrettyPrint + MExpr + MExprEq
+  KeywordMaker + PrettyPrint + SeqAst + ConstAst + CharAst
   syn Expr =
-  | TmExtBind {e: Expr, info: Info}
+  | TmExtBind {e: Expr, ty: Type, info: Info}
 
   -- state that this is a keyword
   sem isKeyword =
   | TmExtBind _ -> true
 
+  sem str2type =
+  | "float" -> Some tyfloat_
+  | "int" -> Some tyint_
+  | "unit" -> Some tyunit_
+
+  sem temporary =
+  | TmSeq t ->
+    match optionMapM (lam a. Some (tmSeq2String a)) t.tms with Some types_ then
+      match optionMapM str2type types_ with Some types then
+        match splitAt types (subi (length types) 1) with (argtypes, rettype) then
+          foldr (lam a. lam b. tyarrow_ a b) (get rettype 0) argtypes
+        else never
+      else never
+    else never
+
   -- handle externalbind symbol as a keyword
   sem matchKeywordString (info: Info) =
-  | "externalbind" -> Some (1, lam lst. TmExtBind {e = get lst 0, info = info})
+  | "externalbind" ->
+    Some (2, lam lst. TmExtBind {
+      e = get lst 0,
+      ty = temporary (get lst 1),
+      info = info
+    })
 
   -- provide cases for convenience functions
   -- TODO: provide an actual type
   sem tyTm =
-  | TmExtBind t -> tyTm t.e
+  --| TmExtBind t -> tyTm t.e
+  | TmExtBind t -> t.ty
 
   sem infoTm =
   | TmExtBind t -> t.info
@@ -38,20 +63,21 @@ lang ExternalsAst =
     let e = typeAnnotExpr env t.e in
     TmExtBind {t with e = e}
 
-  sem pprintCode (indent : Int) (env : PprintEnv) =
+  sem pprintCode (indent : Int) (env: PprintEnv) =
   | TmExtBind t ->
     match printParen indent env t.e with (env, e) in
-    (env, join ["externalbind", pprintNewline indent, e])
+    (env, join ["externalbind", pprintNewline indent , e])
 
-  sem smapAccumL_Expr_Expr f acc =
-  | TmExtBind t ->
-    match f acc t.e with (acc, e) in
-    (acc, TmExtBind {t with e = e})
-
-  -- Equality of the new terms
-  sem eqExprH (env : EqEnv) (free : EqEnv) (lhs : Expr) =
-  | TmExtBind r ->
-    match lhs with TmExtBind l then
-      eqExprH env free l.e r.e
-    else None ()
+  sem tmSeq2String =
+  | TmSeq t ->
+    let extract_char = lam e.
+      match e with TmConst t1 then
+        match t1.val with CChar c then
+          Some c.val
+        else None ()
+      else None ()
+    in
+    match optionMapM extract_char t.tms with Some str then
+      str
+    else never
 end
