@@ -24,7 +24,7 @@ include "tuning/context-expansion.mc"
 include "tuning/tune-file.mc"
 include "jvm/compile.mc"
 
-include "externals/ast.mc"
+include "externals/ocaml.mc"
 
 lang MCoreCompile =
   BootParser +
@@ -34,8 +34,7 @@ lang MCoreCompile =
   MExprUtestGenerate + MExprRuntimeCheck + MExprProfileInstrument +
   MExprPrettyPrint +
   MExprLowerNestedPatterns +
-  OCamlTryWithWrap + MCoreCompileLang + PhaseStats +
-  ExternalsAst
+  OCamlTryWithWrap + MCoreCompileLang + PhaseStats + ExternalsOCaml
 end
 
 lang TyAnnotFull = MExprPrettyPrint + TyAnnot + HtmlAnnotator

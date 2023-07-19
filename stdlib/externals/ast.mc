@@ -2,13 +2,6 @@ include "mexpr/keyword-maker.mc"
 include "mexpr/ast.mc"
 
 lang ExternalsAst =
-  --KeywordMaker + MExprAst + MExprParser +
-  --MExprPrettyPrint +
-  --MExprSym
-  --+ MExprEq + Eval +
-  --PrettyPrint +
-  --MExprTypeCheck + LamEval + OCamlTypePrettyPrint
-  --KeywordMaker + PrettyPrint + MExpr + MExprEq
   KeywordMaker + PrettyPrint + SeqAst + ConstAst + CharAst
   syn Expr =
   | TmExtBind {e: Expr, ty: Type, info: Info}
@@ -18,18 +11,15 @@ lang ExternalsAst =
   | TmExtBind _ -> true
 
   sem str2type =
-  | "float" -> Some tyfloat_
-  | "int" -> Some tyint_
-  | "unit" -> Some tyunit_
+  | "float" -> tyfloat_
+  | "int" -> tyint_
+  | "unit" -> tyunit_
 
   sem temporary =
   | TmSeq t ->
-    match optionMapM (lam a. Some (tmSeq2String a)) t.tms with Some types_ then
-      match optionMapM str2type types_ with Some types then
-        match splitAt types (subi (length types) 1) with (argtypes, rettype) then
-          foldr (lam a. lam b. tyarrow_ a b) (get rettype 0) argtypes
-        else never
-      else never
+    let types = (map (lam a. str2type (tmSeq2String a)) t.tms) in
+    match splitAt types (subi (length types) 1) with (argtypes, rettype) then
+      foldr (lam a. lam b. tyarrow_ a b) (get rettype 0) argtypes
     else never
 
   -- handle externalbind symbol as a keyword
