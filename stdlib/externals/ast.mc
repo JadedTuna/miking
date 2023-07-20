@@ -1,26 +1,15 @@
 include "mexpr/keyword-maker.mc"
 include "mexpr/ast.mc"
+include "mexpr/type-annot.mc"
 
 lang ExternalsAst =
-  KeywordMaker + PrettyPrint + SeqAst + ConstAst + CharAst
+  KeywordMaker + PrettyPrint + SeqAst + ConstAst + CharAst + LamTypeAnnot
   syn Expr =
-  | TmExtBind {e: Expr, ty: Type, deps: [String], info: Info}
+  | TmExtBind {e: Expr, tyExpr: Expr, deps: [String], info: Info}
 
   -- state that this is a keyword
   sem isKeyword =
   | TmExtBind _ -> true
-
-  sem str2type =
-  | "float" -> tyfloat_
-  | "int" -> tyint_
-  | "unit" -> tyunit_
-
-  sem temporary =
-  | TmSeq t ->
-    let types = (map (lam a. str2type (tmSeq2String a)) t.tms) in
-    match splitAt types (subi (length types) 1) with (argtypes, rettype) then
-      foldr (lam a. lam b. tyarrow_ a b) (get rettype 0) argtypes
-    else never
 
   sem getDeps =
   | TmSeq t ->
@@ -31,16 +20,18 @@ lang ExternalsAst =
   | "externalbind" ->
     Some (3, lam lst. TmExtBind {
       e = get lst 0,
-      ty = temporary (get lst 1),
+      tyExpr = get lst 1,
       deps = getDeps (get lst 2),
       info = info
     })
 
   -- provide cases for convenience functions
-  -- TODO: provide an actual type
   sem tyTm =
-  --| TmExtBind t -> tyTm t.e
-  | TmExtBind t -> t.ty
+    -- this expects tyExpr to be a lambda, and returns the parameter's type
+    -- e.g.: lam a : Float -> Float -> Float. ()
+    -- this would return Float -> Float -> Float
+    | TmExtBind {tyExpr = TmLam {ty = TyArrow {from = from}}} ->
+      from
 
   sem infoTm =
   | TmExtBind t -> t.info
@@ -51,12 +42,14 @@ lang ExternalsAst =
   sem typeCheckExpr (env : TCEnv) =
   | TmExtBind t ->
     let e = typeCheckExpr env t.e in
-    TmExtBind {t with e = e}
+    let tyExpr = typeCheckExpr env t.tyExpr in
+    TmExtBind {t with e = e, tyExpr = tyExpr}
 
   sem typeAnnotExpr (env : TypeEnv) =
   | TmExtBind t ->
     let e = typeAnnotExpr env t.e in
-    TmExtBind {t with e = e}
+    let tyExpr = typeAnnotExpr env t.tyExpr in
+    TmExtBind {t with e = e, tyExpr = tyExpr}
 
   sem pprintCode (indent : Int) (env: PprintEnv) =
   | TmExtBind t ->
@@ -66,10 +59,8 @@ lang ExternalsAst =
   sem tmSeq2String =
   | TmSeq t ->
     let extract_char = lam e.
-      match e with TmConst t1 then
-        match t1.val with CChar c then
-          Some c.val
-        else None ()
+      match e with TmConst {val = CChar c} then
+        Some c.val
       else None ()
     in
     match optionMapM extract_char t.tms with Some str then
