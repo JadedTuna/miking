@@ -1,9 +1,10 @@
 include "mexpr/keyword-maker.mc"
 include "mexpr/ast.mc"
 include "mexpr/type-annot.mc"
+include "stringid.mc"
 
 lang ExternalsAst =
-  KeywordMaker + PrettyPrint + SeqAst + ConstAst + CharAst + LamTypeAnnot
+  KeywordMaker + PrettyPrint + SeqAst + ConstAst + CharAst + LamTypeAnnot + RecordAst
   syn Expr =
   | TmExtBind {e: Expr, tyExpr: Expr, deps: [String], info: Info}
 
@@ -18,12 +19,19 @@ lang ExternalsAst =
   -- handle externalbind symbol as a keyword
   sem matchKeywordString (info: Info) =
   | "externalbind" ->
-    Some (3, lam lst. TmExtBind {
-      e = get lst 0,
-      tyExpr = get lst 1,
-      deps = getDeps (get lst 2),
-      info = info
-    })
+    Some (1, lam lst.
+      match (get lst 0) with TmRecord {bindings = b} then
+        let e = mapFindExn (stringToSid "expr") b in
+        let tyExpr = mapFindExn (stringToSid "type_") b in
+        let deps = mapFindExn (stringToSid "deps") b in
+          TmExtBind {
+            e = e,
+            tyExpr = tyExpr,
+            deps = getDeps deps,
+            info = info
+          }
+      else never
+    )
 
   -- provide cases for convenience functions
   sem tyTm =
