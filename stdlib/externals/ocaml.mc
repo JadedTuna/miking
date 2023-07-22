@@ -3,12 +3,18 @@ include "mexpr/ast.mc"
 
 lang ExternalsOCaml = OCamlExternal + ExternalsAst + MExprAst
   sem chooseConvFrom =
+  -- String
+  | TySeq {ty = TyChar _} -> lam a. strJoin " " ["(", "Boot.Intrinsics.Mseq.Helpers.to_utf8", a, ")"]
+  -- List/Rope
   | TySeq {ty = t} -> lam a. strJoin " " ["(", "List.map", "( fun a -> ", (chooseConvFrom t) "a", ")", "(", "Boot.Intrinsics.Mseq.Helpers.to_list", a, ")", ")"]
   | TyInt _
   | TyFloat _
     -> lam a. a
 
   sem chooseConvTo =
+  -- String
+  | TySeq {ty = TyChar _} -> lam a. strJoin " " ["(", "Boot.Intrinsics.Mseq.Helpers.of_utf8", a, ")"]
+  -- List/Rope
   | TySeq {ty = t} -> lam a. strJoin " " ["(", "Boot.Intrinsics.Mseq.Helpers.of_list", "(", "List.map", "( fun a -> ", (chooseConvTo t) "a", ")", a, ")", ")"]
   | TyInt _
   | TyFloat _
