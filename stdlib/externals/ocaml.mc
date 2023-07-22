@@ -1,15 +1,18 @@
 include "ocaml/ast.mc"
-include "ast.mc"
+include "mexpr/ast.mc"
 
-lang ExternalsOCaml = OCamlExternal + ExternalsAst + SeqTypeAst
+lang ExternalsOCaml = OCamlExternal + ExternalsAst + MExprAst
   sem chooseConvFrom =
-  -- list of lists
-  | TySeq {ty = TySeq t} -> lam a. strJoin " " ["(", "List.map", "( fun a -> ", (chooseConvFrom (TySeq t)) "a", ")", "(", "Boot.Intrinsics.Mseq.Helpers.to_list", a, ")", ")"]
-  -- list of base types
-  | TySeq _ -> lam a. strJoin " " ["(", "Boot.Intrinsics.Mseq.Helpers.to_list", a, ")"]
+  | TySeq {ty = t} -> lam a. strJoin " " ["(", "List.map", "( fun a -> ", (chooseConvFrom t) "a", ")", "(", "Boot.Intrinsics.Mseq.Helpers.to_list", a, ")", ")"]
+  | TyInt _
+  | TyFloat _
+    -> lam a. a
 
   sem chooseConvTo =
-  | TySeq _ -> lam a. strJoin " " ["(", "Boot.Intrinsics.Mseq.Helpers.of_list", a, ")"]
+  | TySeq {ty = t} -> lam a. strJoin " " ["(", "Boot.Intrinsics.Mseq.Helpers.of_list", "(", "List.map", "( fun a -> ", (chooseConvTo t) "a", ")", a, ")", ")"]
+  | TyInt _
+  | TyFloat _
+    -> lam a. a
 
   sem generate (env : GenerateEnv) =
   | TmExtBind t ->
