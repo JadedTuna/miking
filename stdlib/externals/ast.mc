@@ -59,6 +59,12 @@ lang ExternalsAst =
     let tyExpr = typeAnnotExpr env t.tyExpr in
     TmExtBind {t with e = e, tyExpr = tyExpr}
 
+  sem smapAccumL_Expr_Expr f acc =
+  | TmExtBind t ->
+    match f acc t.e with (acc, e) in
+      match f acc t.tyExpr with (acc, tyExpr) in
+        (acc, TmExtBind {t with e = e, tyExpr = tyExpr})
+
   sem pprintCode (indent : Int) (env: PprintEnv) =
   | TmExtBind t ->
     match printParen indent env t.e with (env, e) in
