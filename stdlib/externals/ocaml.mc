@@ -5,31 +5,33 @@ include "jit.mc"
 
 lang ExternalsOCaml = OCamlExternal + ExternalsAst + MExprAst
   sem chooseConvFrom =
-  -- String
-  | TySeq {ty = TyChar _} -> lam a. strJoin " " ["(", "Boot.Intrinsics.Mseq.Helpers.to_utf8", a, ")"]
-  -- List/Rope
-  | TySeq {ty = t} -> lam a. strJoin " " ["(", "List.map", "( fun a -> ", (chooseConvFrom t) "a", ")", "(", "Boot.Intrinsics.Mseq.Helpers.to_list", a, ")", ")"]
-  | TyRecord {fields = f} ->
-    if mapIsEmpty f then lam a. a
-    else error "records are not supported in externals"
-  | TyInt _
-  | TyFloat _
-  | TyBool _
-    -> lam a. a
+  | _ -> lam a. a
+  -- -- String
+  -- | TySeq {ty = TyChar _} -> lam a. strJoin " " ["(", "Boot.Intrinsics.Mseq.Helpers.to_utf8", a, ")"]
+  -- -- List/Rope
+  -- | TySeq {ty = t} -> lam a. strJoin " " ["(", "List.map", "( fun a -> ", (chooseConvFrom t) "a", ")", "(", "Boot.Intrinsics.Mseq.Helpers.to_list", a, ")", ")"]
+  -- | TyRecord {fields = f} ->
+  --   if mapIsEmpty f then lam a. a
+  --   else error "records are not supported in externals"
+  -- | TyInt _
+  -- | TyFloat _
+  -- | TyBool _
+  --   -> lam a. a
 
   sem chooseConvTo =
-  -- String
-  | TySeq {ty = TyChar _} -> lam a. strJoin " " ["(", "Boot.Intrinsics.Mseq.Helpers.of_utf8", a, ")"]
-  -- List/Rope
-  | TySeq {ty = t} -> lam a. strJoin " " ["(", "Boot.Intrinsics.Mseq.Helpers.of_list", "(", "List.map", "( fun a -> ", (chooseConvTo t) "a", ")", a, ")", ")"]
-  -- Unit
-  | TyRecord {fields = f} ->
-    if mapIsEmpty f then lam a. a
-    else error "records are not supported in externals"
-  | TyInt _
-  | TyFloat _
-  | TyBool _
-    -> lam a. a
+  | _ -> lam a. a
+  -- -- String
+  -- | TySeq {ty = TyChar _} -> lam a. strJoin " " ["(", "Boot.Intrinsics.Mseq.Helpers.of_utf8", a, ")"]
+  -- -- List/Rope
+  -- | TySeq {ty = t} -> lam a. strJoin " " ["(", "Boot.Intrinsics.Mseq.Helpers.of_list", "(", "List.map", "( fun a -> ", (chooseConvTo t) "a", ")", a, ")", ")"]
+  -- -- Unit
+  -- | TyRecord {fields = f} ->
+  --   if mapIsEmpty f then lam a. a
+  --   else error "records are not supported in externals"
+  -- | TyInt _
+  -- | TyFloat _
+  -- | TyBool _
+  --   -> lam a. a
 
   sem generate (env : GenerateEnv) =
   | TmExtBind t ->

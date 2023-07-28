@@ -3,9 +3,12 @@ include "string.mc"
 
 let readline = externalbind {
   type_ = lam a : String -> String. (),
-  expr = "fun s -> match LNoise.linenoise s with
+  expr = "fun s ->
+  let s = Boot.Intrinsics.Mseq.Helpers.to_utf8 s in
+  Boot.Intrinsics.Mseq.Helpers.of_utf8 (
+  match LNoise.linenoise s with
     | None -> \"\"
-    | Some v -> v",
+    | Some v -> v)",
   deps = ["linenoise"]
 }
 

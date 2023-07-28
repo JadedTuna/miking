@@ -1,6 +1,9 @@
 include "common.mc"
 include "string.mc"
 
+-- NOTE: currently doesn't work, while type conversion functions
+-- are developed
+
 let ext_flatten = externalbind {
   type_ = lam a : [[[[Int]]]] -> [Int]. (),
   expr = "fun a -> List.flatten (List.flatten (List.flatten a))",
