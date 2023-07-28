@@ -107,4 +107,30 @@ lang MCoreCompileLang =
       res
     in
     compileMCore ast (mkEmptyHooks compileOcaml)
+
+  sem compileMCorePlugin : all a. [(String, Top)] -> [String] -> [String] -> Hooks a -> a
+  sem compileMCorePlugin nametops libs clibs =
+  | hooks ->
+    let genModule = use OCamlPrettyPrint in
+      lam nt.
+        let modname = join ["M_", nt.0] in
+        (strJoin "\n" [
+          join ["module ", modname, ":Boot.Inter.PLUG ="],
+          "struct ",
+          pprintOcamlTops [nt.1],
+          "let residual () = Obj.magic (v_main ())",
+          "end"],
+          join ["Boot.Inter.register \"", nt.0, "\" (module ", modname, ":Boot.Inter.PLUG)"])
+    in
+    let ocamlProg =
+      match unzip (map genModule nametops) with (modules, inits) in
+        strJoin "\n" [
+          strJoin "\n" modules,
+          "let () =",
+          strJoin ";\n" inits
+        ]
+    in
+
+    -- Compile OCaml AST
+    hooks.compileOcaml libs clibs ocamlProg
 end

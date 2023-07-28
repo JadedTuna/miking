@@ -851,6 +851,12 @@ lang RefOpPrettyPrint = RefOpAst + ConstPrettyPrint
   | CDeRef _ -> "deref"
 end
 
+lang ExtSupportPrettyPrint = ExtSupportAst + ConstPrettyPrint
+  sem getConstStringCode (indent : Int) =
+  | CCallExternal _ -> "callExternal"
+  | CLoadLibraries _ -> "loadLibraries"
+end
+
 lang ConTagPrettyPrint = ConTagAst + ConstPrettyPrint
   sem getConstStringCode (indent : Int) =
   | CConstructorTag _ -> "constructorTag"
@@ -1222,7 +1228,7 @@ lang MExprPrettyPrint =
   SeqOpPrettyPrint + FileOpPrettyPrint + IOPrettyPrint +
   RandomNumberGeneratorPrettyPrint + SysPrettyPrint + TimePrettyPrint +
   ConTagPrettyPrint + RefOpPrettyPrint + TensorOpPrettyPrint +
-  BootParserPrettyPrint + UnsafeCoercePrettyPrint +
+  BootParserPrettyPrint + UnsafeCoercePrettyPrint + ExtSupportPrettyPrint +
 
   -- Patterns
   NamedPatPrettyPrint + SeqTotPatPrettyPrint + SeqEdgePatPrettyPrint +

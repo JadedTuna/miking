@@ -207,6 +207,8 @@ lang OCamlPrettyPrint =
   | CRef _ -> "ref"
   | CModRef _ -> "(:=)"
   | CDeRef _ -> "(!)"
+  | CCallExternal _ -> intrinsicOpExt "call_external"
+  | CLoadLibraries _ -> intrinsicOpExt "load_libraries"
   | CConstructorTag _ -> intrinsicOpConTag "constructor_tag"
   | CFloorfi _ -> intrinsicOpFloat "floorfi"
   | CCeilfi _ -> intrinsicOpFloat "ceilfi"

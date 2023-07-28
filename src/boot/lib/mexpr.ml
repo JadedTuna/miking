@@ -15,6 +15,39 @@ open Intrinsics
    for instance by the Jupyter kernel *)
 let program_output = ref uprint_string
 
+let rec unwrapAst = function
+  | TmConst (_, CFloat v) ->
+      Obj.magic v
+  | TmConst (_, CInt v) ->
+      Obj.magic v
+  | TmConst (_, CChar v) ->
+      Obj.magic v
+  | TmConst (_, CBool v) ->
+      Obj.magic v
+  | TmSeq (_, s) ->
+      Obj.magic (Mseq.map unwrapAst s)
+  | TmRecord (_, r) when Record.is_empty r ->
+      Obj.magic ()
+  | tm ->
+      failwith ("cannot unwrap: " ^ (Ustring.to_utf8 (ustring_of_tm tm)))
+
+let rec rewrapAst v = function
+  | TmConst (_, CFloat _) ->
+      TmConst (NoInfo, CFloat (Obj.magic v))
+  | TmConst (_, CInt _) ->
+      TmConst (NoInfo, CInt (Obj.magic v))
+  | TmConst (_, CChar _) ->
+      TmConst (NoInfo, CChar (Obj.magic v))
+  | TmConst (_, CBool _) ->
+      TmConst (NoInfo, CBool (Obj.magic v))
+  | TmSeq (_, s) ->
+      let f = (fun a -> rewrapAst a (Mseq.head s)) in
+      TmSeq (NoInfo, Mseq.map f (Obj.magic v))
+  | TmRecord (_, r) when Record.is_empty r ->
+      TmRecord (NoInfo, r)
+  | tm ->
+      failwith ("cannot rewrap: " ^ (Ustring.to_utf8 (ustring_of_tm tm)))
+
 (* Returns the number of expected arguments of a constant *)
 let arity = function
   | CunsafeCoerce ->
@@ -305,6 +338,13 @@ let arity = function
   | CmodRef (Some _) ->
       1
   | CdeRef ->
+      1
+  (* MCore intrinsics: External support *)
+  | CcallExternal None ->
+      2
+  | CcallExternal (Some _) ->
+      1
+  | CloadLibraries ->
       1
   (* MCore intrinsics: Tensor *)
   | CtensorCreateDense None ->
@@ -980,6 +1020,26 @@ let delta (apply : info -> tm -> tm -> tm) fi c v =
   | CdeRef, TmRef (_, r) ->
       !r
   | CdeRef, _ ->
+      fail_constapp fi
+  (* MCore intrinsics: External support *)
+  | CcallExternal None, TmSeq (fi, s) ->
+      let s = tm_seq2int_seq fi s in
+      TmConst (fi, CcallExternal (Some s))
+  | CcallExternal Some s, TmSeq (fi, r) ->
+      if Mseq.length r < 1 then fail_constapp fi else
+      let r = Mseq.reverse r in
+      let arg_mock = Mseq.head r in
+      let args = Mseq.map unwrapAst (Mseq.reverse r) in
+      let v = Externals.call_external s args in
+      let result = rewrapAst v arg_mock in
+      result
+  | CcallExternal _, _ ->
+      fail_constapp fi
+  | CloadLibraries, TmSeq (fi, s) ->
+      let s = tm_seq2int_seq fi s in
+      Externals.load_libraries s;
+      tm_unit
+  | CloadLibraries, _ ->
       fail_constapp fi
   (* MCore intrinsics: Tensors *)
   | CtensorCreateUninitInt, TmSeq (_, seq) ->

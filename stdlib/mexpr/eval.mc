@@ -642,6 +642,54 @@ lang RefOpEval = RefOpAst + RefEval + IntAst + RefOpArity
   | (CDeRef _, [TmRef r]) -> deref r.ref
 end
 
+lang ExtSupportEval = ExtSupportAst + MExprAst + ExtSupportArity
+  sem unwrapAst =
+  | TmConst {val = CFloat {val = v}} ->
+    unsafeCoerce v
+  | TmConst {val = CInt {val = v}} ->
+    unsafeCoerce v
+  | TmConst {val = CChar {val = v}} ->
+    unsafeCoerce v
+  | TmConst {val = CBool {val = v}} ->
+    unsafeCoerce v
+  | TmSeq {tms = tms} ->
+    unsafeCoerce (map unwrapAst tms)
+  | TmRecord {bindings = {root = avlEmpty}} ->
+    unsafeCoerce {}
+  | tm ->
+    use MExprPrettyPrint in
+    errorSingle [NoInfo ()] (concat "cannot unwrap: " (expr2str tm))
+
+  sem rewrapAst v =
+  | TmConst {val = CFloat ()} ->
+    float_ (unsafeCoerce v)
+  | TmConst {val = CInt ()} ->
+    int_ (unsafeCoerce v)
+  | TmConst {val = CChar ()} ->
+    char_ (unsafeCoerce v)
+  | TmConst {val = CBool ()} ->
+    bool_ (unsafeCoerce v)
+  | TmSeq {ty = TySeq {ty = TyChar _}} ->
+    str_ (unsafeCoerce v)
+  | TmRecord {bindings = {root = avlEmpty}} ->
+    unit_
+  | tm ->
+    use MExprPrettyPrint in
+    errorSingle [NoInfo ()] (concat "cannot rewrap into: " (expr2str tm))
+
+  sem delta info =
+  | (CCallExternal _, [TmSeq s, TmSeq args]) ->
+    let s = _evalSeqOfCharsToString info s.tms in
+    -- rope in the backend breaks when mapping unwrapAst, so using list instead
+    let tms = toList args.tms in
+    let mock_arg = last tms in
+      -- mock argument sent too so OCaml knows how to rewrap
+      let uw_args = map unwrapAst tms in
+      let raw_result = callExternal s uw_args in
+      let result = rewrapAst raw_result mock_arg in
+      result
+end
+
 lang ConTagEval = ConTagAst + DataAst + IntAst + IntTypeAst + ConTagArity
   sem delta info =
   | (CConstructorTag _, [TmConApp {ident = id}]) ->
@@ -1208,7 +1256,7 @@ lang MExprEval =
   SymbEval + CmpSymbEval + SeqOpEval + FileOpEval + IOEval + SysEval +
   RandomNumberGeneratorEval + FloatIntConversionEval + CmpCharEval +
   IntCharConversionEval + FloatStringConversionEval + TimeEval + RefOpEval +
-  ConTagEval + TensorOpEval + BootParserEval + UnsafeCoerceEval
+  ConTagEval + TensorOpEval + BootParserEval + UnsafeCoerceEval + ExtSupportEval
 
   -- Patterns
   + NamedPatEval + SeqTotPatEval + SeqEdgePatEval + RecordPatEval + DataPatEval +

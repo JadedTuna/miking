@@ -3,10 +3,12 @@ include "mexpr/ast.mc"
 include "mexpr/type-annot.mc"
 include "stringid.mc"
 
+include "ocaml/ast.mc"
+
 lang ExternalsAst =
   KeywordMaker + PrettyPrint + SeqAst + ConstAst + CharAst + LamTypeAnnot + RecordAst
   syn Expr =
-  | TmExtBind {e: Expr, tyExpr: Expr, deps: [String], info: Info}
+  | TmExtBind {e: Expr, ty: Type, deps: [String], info: Info}
 
   -- state that this is a keyword
   sem isKeyword =
@@ -22,11 +24,14 @@ lang ExternalsAst =
     Some (1, lam lst.
       match (get lst 0) with TmRecord {bindings = b} then
         let e = mapFindExn (stringToSid "expr") b in
-        let tyExpr = mapFindExn (stringToSid "type_") b in
+        -- this expects type_ to be a lambda, and returns the parameter's type
+        -- e.g.: lam a : Float -> Float -> Float. ()
+        -- this would give Float -> Float -> Float
+        match (mapFindExn (stringToSid "type_") b) with TmLam {tyAnnot = ty} in
         let deps = mapFindExn (stringToSid "deps") b in
           TmExtBind {
             e = e,
-            tyExpr = tyExpr,
+            ty = ty,
             deps = getDeps deps,
             info = info
           }
@@ -35,11 +40,7 @@ lang ExternalsAst =
 
   -- provide cases for convenience functions
   sem tyTm =
-    -- this expects tyExpr to be a lambda, and returns the parameter's type
-    -- e.g.: lam a : Float -> Float -> Float. ()
-    -- this would return Float -> Float -> Float
-    | TmExtBind {tyExpr = TmLam {ty = TyArrow {from = from}}} ->
-      from
+    | TmExtBind {ty = ty} -> ty
 
   sem infoTm =
   | TmExtBind t -> t.info
@@ -50,20 +51,17 @@ lang ExternalsAst =
   sem typeCheckExpr (env : TCEnv) =
   | TmExtBind t ->
     let e = typeCheckExpr env t.e in
-    let tyExpr = typeCheckExpr env t.tyExpr in
-    TmExtBind {t with e = e, tyExpr = tyExpr}
+    TmExtBind {t with e = e}
 
   sem typeAnnotExpr (env : TypeEnv) =
   | TmExtBind t ->
     let e = typeAnnotExpr env t.e in
-    let tyExpr = typeAnnotExpr env t.tyExpr in
-    TmExtBind {t with e = e, tyExpr = tyExpr}
+    TmExtBind {t with e = e}
 
   sem smapAccumL_Expr_Expr f acc =
   | TmExtBind t ->
     match f acc t.e with (acc, e) in
-      match f acc t.tyExpr with (acc, tyExpr) in
-        (acc, TmExtBind {t with e = e, tyExpr = tyExpr})
+      (acc, TmExtBind {t with e = e})
 
   sem pprintCode (indent : Int) (env: PprintEnv) =
   | TmExtBind t ->

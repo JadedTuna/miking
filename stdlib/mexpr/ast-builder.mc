@@ -1011,6 +1011,13 @@ let deref_ = use MExprAst in
 let modref_ = use MExprAst in
   lam r. lam v. appf2_ (uconst_ (CModRef ())) r v
 
+-- External support
+let callExternal_ = use MExprAst in
+  lam id. lam args. appf2_ (uconst_ (CCallExternal ())) id args
+
+let loadLibraries_ = use MExprAst in
+  lam cmxs. app_ (uconst_ (CLoadLibraries ())) cmxs
+
 -- File operations
 let readFile_ = use MExprAst in
   lam f. appf1_ (uconst_ (CFileRead ())) f

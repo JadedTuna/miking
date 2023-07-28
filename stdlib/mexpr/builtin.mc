@@ -101,6 +101,9 @@ let builtin = use MExprAst in
   , ("ref", CRef ())
   , ("deref", CDeRef ())
   , ("modref", CModRef ())
+  -- External support
+  , ("callExternal", CCallExternal ())
+  , ("loadLibraries", CLoadLibraries ())
   -- Tensors
   , ("tensorCreateUninitInt", CTensorCreateUninitInt ())
   , ("tensorCreateUninitFloat", CTensorCreateUninitFloat ())
